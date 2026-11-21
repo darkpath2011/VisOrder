@@ -1,0 +1,946 @@
+/* Settings panel styles — ported from aim-trainer-web SettingsView.vue (MIT).
+   All selectors are scoped under .aim-settings. Crosshair preview styles are
+   included here so live/mini previews render without a separate stylesheet. */
+
+.aim-settings {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(5, 9, 13, 0.78);
+  backdrop-filter: blur(8px);
+  /* Keep wheel/trackpad on the panel, not the WebGL canvas underneath. */
+  overscroll-behavior: contain;
+}
+
+.aim-settings .settings-shell {
+  width: min(1040px, 100%);
+  height: min(720px, calc(100dvh - 48px));
+  max-height: calc(100dvh - 48px);
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  overflow: hidden;
+  color: #edf3f5;
+  background: #141a1e;
+  border: 1px solid #34434b;
+  border-radius: 6px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.48);
+}
+
+.aim-settings .settings-nav {
+  display: flex;
+  flex-direction: column;
+  padding: 28px 16px 20px;
+  background: #0e1418;
+  border-right: 1px solid #2b373d;
+}
+
+.aim-settings .settings-brand {
+  padding: 0 10px 28px;
+}
+
+.aim-settings .eyebrow {
+  color: #78a5b5;
+  font-family: "Cascadia Mono", "SFMono-Regular", monospace;
+  font-size: 10px;
+  letter-spacing: 0;
+}
+
+.aim-settings .settings-brand h2,
+.aim-settings .content-header h3 {
+  margin-top: 6px;
+  letter-spacing: 0;
+}
+
+.aim-settings .settings-brand h2 {
+  font-size: 22px;
+}
+
+.aim-settings .settings-nav nav {
+  display: grid;
+  gap: 4px;
+}
+
+.aim-settings .tab-btn {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 12px;
+  color: #9eacb2;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  text-align: left;
+}
+
+.aim-settings .tab-btn:hover {
+  color: #e8f2f5;
+  background: #172126;
+}
+
+.aim-settings .tab-btn.active {
+  color: #f3fbfd;
+  background: #17262c;
+  border-color: #29515d;
+}
+
+.aim-settings .tab-index {
+  color: #4fc8dd;
+  font-family: "Cascadia Mono", monospace;
+  font-size: 10px;
+}
+
+.aim-settings .nav-note {
+  margin-top: auto;
+  padding: 0 10px;
+  color: #607179;
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.aim-settings .settings-main {
+  min-width: 0;
+  /* Without min-height:0 the grid row grows with content and clips with no scroll. */
+  min-height: 0;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.aim-settings .content-header,
+.aim-settings .settings-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 28px;
+  border-bottom: 1px solid #2b373d;
+}
+
+.aim-settings .content-header h3 {
+  font-size: 24px;
+}
+
+.aim-settings .icon-close {
+  width: 40px;
+  height: 40px;
+  color: #9eacb2;
+  background: transparent;
+  border: 1px solid #34434b;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 25px;
+  line-height: 1;
+}
+
+.aim-settings .icon-close:hover {
+  color: #ffffff;
+  border-color: #5a737e;
+}
+
+.aim-settings .settings-content {
+  min-height: 0;
+  padding: 26px 28px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.aim-settings .section-stack {
+  display: grid;
+  align-content: start;
+  gap: 26px;
+}
+
+.aim-settings .control-layout {
+  max-width: 620px;
+}
+
+.aim-settings .field-block {
+  display: grid;
+  gap: 10px;
+}
+
+.aim-settings .field-block > label,
+.aim-settings .target-color-block label {
+  color: #c4d0d4;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.aim-settings .field-block p,
+.aim-settings .master-toggle small,
+.aim-settings .hit-sound-option small,
+.aim-settings .track-copy small,
+.aim-settings .background-copy small {
+  color: #71838b;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.aim-settings select,
+.aim-settings .number-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  color: #eef5f7;
+  background: #0d1316;
+  border: 1px solid #34434b;
+  border-radius: 4px;
+  outline: none;
+}
+
+.aim-settings select:focus,
+.aim-settings .number-input:focus {
+  border-color: #42bfd5;
+}
+
+.aim-settings .label-row,
+.aim-settings .slider-field > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.aim-settings output {
+  color: #55d2e7;
+  font-family: "Cascadia Mono", monospace;
+  font-size: 12px;
+}
+
+.aim-settings input[type="range"] {
+  width: 100%;
+  accent-color: #40c7dc;
+}
+
+.aim-settings .crosshair-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.72fr) minmax(360px, 1.28fr);
+  gap: 28px;
+}
+
+.aim-settings .preview-stage {
+  position: relative;
+  min-height: 360px;
+  overflow: hidden;
+  background-color: #20282d;
+  background-image:
+    linear-gradient(rgba(88, 112, 122, 0.3) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(88, 112, 122, 0.3) 1px, transparent 1px);
+  background-size: 36px 36px;
+  border: 1px solid #34434b;
+  border-radius: 4px;
+}
+
+.aim-settings .preview-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0 50% 0 0;
+  background: rgba(235, 239, 239, 0.74);
+}
+
+.aim-settings .preview-label {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 6;
+  color: #0e181d;
+  font-family: "Cascadia Mono", monospace;
+  font-size: 9px;
+  letter-spacing: 0;
+}
+
+.aim-settings .crosshair-controls {
+  gap: 20px;
+}
+
+.aim-settings .style-options {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.aim-settings .style-option {
+  min-width: 0;
+  height: 78px;
+  display: grid;
+  grid-template-rows: 42px auto;
+  place-items: center;
+  padding: 6px;
+  color: #86969d;
+  background: #0f1518;
+  border: 1px solid #2f3c42;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.aim-settings .style-option:hover,
+.aim-settings .style-option.active {
+  color: #eef7f9;
+  border-color: #42bfd5;
+}
+
+.aim-settings .mini-preview {
+  position: relative;
+  width: 42px;
+  height: 42px;
+}
+
+.aim-settings .color-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.aim-settings .swatch {
+  width: 30px;
+  height: 30px;
+  border: 2px solid #1a2327;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 0 1px #3a494f;
+}
+
+.aim-settings .swatch.active {
+  box-shadow: 0 0 0 2px #48c9df;
+}
+
+.aim-settings .color-picker {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 9px;
+  color: #a8b6bb;
+  background: #0e1417;
+  border: 1px solid #34434b;
+  border-radius: 4px;
+  font-family: "Cascadia Mono", monospace;
+  font-size: 10px;
+}
+
+.aim-settings .color-picker input {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.aim-settings .slider-grid,
+.aim-settings .volume-list {
+  display: grid;
+  gap: 16px;
+}
+
+.aim-settings .slider-grid {
+  grid-template-columns: 1fr 1fr;
+}
+
+.aim-settings .slider-field {
+  display: grid;
+  gap: 9px;
+  color: #aebcc1;
+  font-size: 12px;
+}
+
+.aim-settings .toggle-row,
+.aim-settings .master-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.aim-settings .toggle-row {
+  min-height: 44px;
+  color: #aebcc1;
+  font-size: 12px;
+}
+
+.aim-settings input[type="checkbox"] {
+  width: 40px;
+  height: 22px;
+  accent-color: #42bfd5;
+}
+
+.aim-settings .background-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.aim-settings .background-option {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: 94px auto;
+  overflow: hidden;
+  color: #e9f0f2;
+  background: #0f1518;
+  border: 1px solid #2e3b41;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.aim-settings .background-option:hover,
+.aim-settings .background-option.active {
+  border-color: #43c5da;
+}
+
+.aim-settings .background-option.active {
+  box-shadow: inset 0 -2px #43c5da;
+}
+
+.aim-settings .background-preview {
+  display: block;
+  border-bottom: 1px solid #2e3b41;
+}
+
+.aim-settings .background-copy {
+  display: grid;
+  gap: 3px;
+  padding: 10px 11px;
+}
+
+.aim-settings .background-copy b,
+.aim-settings .track-copy b {
+  font-size: 12px;
+}
+
+.aim-settings .target-color-block {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  padding-top: 22px;
+  border-top: 1px solid #2b373d;
+}
+
+.aim-settings .target-swatch {
+  width: 34px;
+  height: 34px;
+}
+
+.aim-settings .sound-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.8fr) minmax(360px, 1.2fr);
+  gap: 34px;
+}
+
+.aim-settings .master-toggle {
+  padding-bottom: 18px;
+  border-bottom: 1px solid #2b373d;
+}
+
+.aim-settings .master-toggle > span {
+  display: grid;
+  gap: 3px;
+}
+
+.aim-settings .master-toggle b {
+  font-size: 13px;
+}
+
+.aim-settings .volume-list.disabled {
+  opacity: 0.4;
+}
+
+.aim-settings .hit-sound-picker {
+  gap: 10px;
+}
+
+.aim-settings .hit-sound-picker.disabled {
+  opacity: 0.4;
+}
+
+.aim-settings .hit-sound-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+.aim-settings .hit-sound-option {
+  min-width: 0;
+  min-height: 62px;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  padding: 8px 9px;
+  color: #e8f0f2;
+  background: #0f1518;
+  border: 1px solid #2e3b41;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.aim-settings .hit-sound-option:hover,
+.aim-settings .hit-sound-option.active {
+  border-color: #43c5da;
+}
+
+.aim-settings .hit-sound-option:disabled {
+  cursor: default;
+}
+
+.aim-settings .hit-sound-option > span:last-child {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.aim-settings .hit-sound-option b {
+  font-size: 11px;
+}
+
+.aim-settings .hit-sound-icon {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.aim-settings .hit-sound-icon i {
+  width: 3px;
+  height: 34%;
+  background: #3f7884;
+}
+
+.aim-settings .hit-sound-icon i:nth-child(2) {
+  height: 82%;
+}
+
+.aim-settings .hit-sound-icon i:nth-child(3) {
+  height: 52%;
+}
+
+.aim-settings .hit-sound-option.active .hit-sound-icon i {
+  background: #4fd2e8;
+}
+
+.aim-settings .music-picker {
+  align-content: start;
+}
+
+.aim-settings .track-list {
+  display: grid;
+  gap: 7px;
+}
+
+.aim-settings .track-option {
+  min-width: 0;
+  min-height: 66px;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  color: #e8f0f2;
+  background: #0f1518;
+  border: 1px solid #2e3b41;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.aim-settings .track-option:hover,
+.aim-settings .track-option.active {
+  border-color: #43c5da;
+}
+
+.aim-settings .track-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.aim-settings .track-bpm {
+  color: #6f858e;
+  font-family: "Cascadia Mono", monospace;
+  font-size: 9px;
+}
+
+.aim-settings .track-eq {
+  height: 28px;
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  gap: 3px;
+}
+
+.aim-settings .track-eq i {
+  width: 3px;
+  height: 45%;
+  background: #3f7884;
+}
+
+.aim-settings .track-eq i:nth-child(2) {
+  height: 85%;
+}
+
+.aim-settings .track-eq i:nth-child(3) {
+  height: 62%;
+}
+
+.aim-settings .track-eq i:nth-child(4) {
+  height: 100%;
+}
+
+.aim-settings .track-option.active .track-eq i {
+  background: #4fd2e8;
+}
+
+.aim-settings .settings-footer {
+  border-top: 1px solid #2b373d;
+  border-bottom: 0;
+}
+
+.aim-settings .footer-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.aim-settings .btn,
+.aim-settings .text-btn {
+  height: 40px;
+  padding: 0 18px;
+  color: #b9c5c9;
+  background: transparent;
+  border: 1px solid #3a4a51;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.aim-settings .btn:hover,
+.aim-settings .text-btn:hover {
+  color: #ffffff;
+  border-color: #607780;
+}
+
+.aim-settings .btn.primary {
+  color: #041317;
+  background: #4ccce2;
+  border-color: #4ccce2;
+  font-weight: 700;
+}
+
+.aim-settings .text-btn {
+  padding: 0;
+  border-color: transparent;
+  color: #72858d;
+  font-size: 11px;
+}
+
+/* Crosshair preview (ported from Crosshair.vue) — scoped so settings can
+   render live + mini previews without a global aim-crosshair stylesheet. */
+.aim-settings .aim-crosshair {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.aim-settings .aim-ch {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: var(--ch);
+}
+
+.aim-settings .aim-ch--dot {
+  width: var(--ch-dot);
+  height: var(--ch-dot);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow:
+    0 0 0 1px var(--ch-outline),
+    0 0 4px var(--ch);
+}
+
+.aim-settings .aim-ch--dot-small {
+  width: max(2px, calc(var(--ch-dot) * 0.72));
+  height: max(2px, calc(var(--ch-dot) * 0.72));
+}
+
+.aim-settings .aim-ch--ring {
+  width: var(--ch-size);
+  height: var(--ch-size);
+  border-radius: 50%;
+  background: transparent;
+  border: var(--ch-thickness) solid var(--ch);
+  transform: translate(-50%, -50%);
+  box-shadow:
+    0 0 0 1px var(--ch-outline),
+    0 0 5px var(--ch);
+}
+
+.aim-settings .aim-ch--bar {
+  background: var(--ch);
+  box-shadow:
+    0 0 0 1px var(--ch-outline),
+    0 0 3px var(--ch);
+}
+
+.aim-settings .aim-ch--bar-h {
+  width: var(--ch-size);
+  height: var(--ch-thickness);
+  transform: translate(-50%, -50%);
+}
+
+.aim-settings .aim-ch--bar-v {
+  width: var(--ch-thickness);
+  height: var(--ch-size);
+  transform: translate(-50%, -50%);
+}
+
+.aim-settings .aim-ch--line {
+  width: var(--ch-thickness);
+  height: calc((var(--ch-size) - var(--ch-gap)) / 2);
+  box-shadow:
+    0 0 0 1px var(--ch-outline),
+    0 0 3px var(--ch);
+}
+
+.aim-settings .aim-ch--up {
+  top: calc(50% - var(--ch-gap) / 2);
+  transform: translate(-50%, -100%);
+}
+
+.aim-settings .aim-ch--down {
+  top: calc(50% + var(--ch-gap) / 2);
+  transform: translateX(-50%);
+}
+
+.aim-settings .aim-ch--left {
+  left: calc(50% - var(--ch-gap) / 2);
+  width: calc((var(--ch-size) - var(--ch-gap)) / 2);
+  height: var(--ch-thickness);
+  transform: translate(-100%, -50%);
+}
+
+.aim-settings .aim-ch--right {
+  left: calc(50% + var(--ch-gap) / 2);
+  width: calc((var(--ch-size) - var(--ch-gap)) / 2);
+  height: var(--ch-thickness);
+  transform: translateY(-50%);
+}
+
+.aim-settings .expr-block {
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #2b373d;
+}
+
+.aim-settings .expr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.aim-settings .expr-format-btn {
+  height: auto;
+  padding: 0;
+  border: 0;
+  color: #55d2e7;
+  font-size: 12px;
+}
+
+.aim-settings .expr-format-btn:disabled {
+  color: #4a5a60;
+  cursor: default;
+}
+
+.aim-settings .expr-input {
+  width: 100%;
+  min-height: 88px;
+  padding: 12px 14px;
+  resize: vertical;
+  color: #eef5f7;
+  background: #0d1316;
+  border: 1px solid #34434b;
+  border-radius: 4px;
+  outline: none;
+  font-family: "Cascadia Mono", "SFMono-Regular", ui-monospace, monospace;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.aim-settings .expr-input:focus {
+  border-color: #42bfd5;
+}
+
+.aim-settings .expr-input[aria-invalid="true"] {
+  border-color: #c45b6a;
+}
+
+.aim-settings .expr-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.aim-settings .expr-preset {
+  height: 30px;
+  padding: 0 12px;
+  color: #9eacb2;
+  background: #0f1518;
+  border: 1px solid #2f3c42;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.aim-settings .expr-preset:hover,
+.aim-settings .expr-preset.active {
+  color: #eef7f9;
+  border-color: #42bfd5;
+}
+
+.aim-settings .expr-help {
+  color: #71838b;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.aim-settings .expr-help code {
+  padding: 1px 5px;
+  color: #9ed7e4;
+  background: #152024;
+  border-radius: 3px;
+  font-family: "Cascadia Mono", monospace;
+  font-size: 10px;
+}
+
+.aim-settings .expr-status {
+  margin: 0;
+  font-family: "Cascadia Mono", monospace;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.aim-settings .expr-status--ok {
+  color: #55d2e7;
+}
+
+.aim-settings .expr-status--bad {
+  color: #ff7b8a;
+}
+
+.aim-settings .btn.primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+@media (max-width: 820px) {
+  .aim-settings {
+    padding: 0;
+  }
+
+  .aim-settings .settings-shell {
+    width: 100%;
+    height: 100%;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+    border: 0;
+    border-radius: 0;
+  }
+
+  .aim-settings .settings-nav {
+    padding: 14px 16px 0;
+    border-right: 0;
+    border-bottom: 1px solid #2b373d;
+  }
+
+  .aim-settings .settings-brand,
+  .aim-settings .nav-note {
+    display: none;
+  }
+
+  .aim-settings .settings-nav nav {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .aim-settings .tab-btn {
+    justify-content: center;
+  }
+
+  .aim-settings .tab-index {
+    display: none;
+  }
+
+  .aim-settings .content-header,
+  .aim-settings .settings-content,
+  .aim-settings .settings-footer {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .aim-settings .crosshair-layout,
+  .aim-settings .sound-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .aim-settings .preview-stage {
+    min-height: 190px;
+  }
+
+  .aim-settings .background-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .aim-settings .target-color-block {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .aim-settings .content-header {
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+
+  .aim-settings .settings-content {
+    padding-top: 18px;
+    padding-bottom: 18px;
+  }
+
+  .aim-settings .style-options {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .aim-settings .slider-grid,
+  .aim-settings .background-grid,
+  .aim-settings .hit-sound-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .aim-settings .settings-footer {
+    gap: 12px;
+  }
+
+  .aim-settings .text-btn {
+    display: none;
+  }
+
+  .aim-settings .footer-actions {
+    width: 100%;
+  }
+
+  .aim-settings .footer-actions .btn {
+    flex: 1;
+  }
+}
