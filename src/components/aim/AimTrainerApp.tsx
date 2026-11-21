@@ -32,13 +32,24 @@ import {
   trialsComplete,
   type CalibRunState,
 } from "@/lib/aim-trainer/calib/orchestrator";
-import { scoreTrialObj } from "@/lib/aim-trainer/calib/metrics";
+import { scoreTrialObj, proxyObjFromSession } from "@/lib/aim-trainer/calib/metrics";
 import { checkSensitivityDrift } from "@/lib/aim-trainer/calib/drift";
+import {
+  applyProbeToRecommendation,
+  baselineProxyFromLogs,
+  evaluateProbe,
+  pickProbeCm360,
+  probeAdoptAvailable,
+  shouldProbeThisSession,
+  type ProbePlan,
+  type ProbeVerdict,
+} from "@/lib/aim-trainer/calib/onlineProbe";
 import type {
   CalibRecommendation,
   TaskFamily,
   TrialMetrics,
 } from "@/lib/aim-trainer/calib/types";
+import { sensFromCm360 } from "@/lib/aim-trainer/core/gain";
 import {
   loadAppearance,
   type AppearanceSettings,
@@ -58,8 +69,12 @@ import {
 import {
   appendAimSessionLog,
   pullAndMergeAimSessions,
+  readAimSessionLog,
 } from "@/lib/aim-trainer/store/sessionLog";
+import { appendProbeLog } from "@/lib/aim-trainer/store/probeLog";
 import {
+  loadRecommendation,
+  patchLatestRecommendation,
   pullAndMergeRecommendations,
   saveRecommendation,
 } from "@/lib/aim-trainer/store/recommendation";
@@ -154,6 +169,10 @@ export function AimTrainerApp() {
   const [driftMessage, setDriftMessage] = useState<string | null>(null);
   const [calibRecommendation, setCalibRecommendation] =
     useState<CalibRecommendation | null>(null);
+  /** Active route-C probe for the in-flight daily aim round, if any. */
+  const [activeProbe, setActiveProbe] = useState<ProbePlan | null>(null);
+  const [probeVerdict, setProbeVerdict] = useState<ProbeVerdict | null>(null);
+  const activeProbeRef = useRef<ProbePlan | null>(null);
 
   // Keep latest screen/result for Engine callbacks without rebinding every render.
   const screenRef = useRef(screen);
@@ -344,6 +363,21 @@ export function AimTrainerApp() {
     setResultBest(null);
     setResultIsNew(false);
     setHud(null);
+    setProbeVerdict(null);
+
+    // Route C: occasionally probe ±5% cm/360 without writing settings yet.
+    const settings = loadSettings();
+    const recommendation = loadRecommendation();
+    const upcomingCount = readAimSessionLog().length + 1;
+    let probe: ProbePlan | null = null;
+    if (shouldProbeThisSession(settings, recommendation, upcomingCount) && recommendation) {
+      probe = pickProbeCm360(recommendation);
+      applyGainForCm360(probe.cm360);
+    } else {
+      restoreUserSensitivity();
+    }
+    activeProbeRef.current = probe;
+    setActiveProbe(probe);
 
     const session = engine.createSession(mode);
     sessionRef.current = session;
@@ -354,7 +388,16 @@ export function AimTrainerApp() {
       setResultBest(isNew ? s.score : (prev ?? s.score));
       setResultIsNew(prev !== null && isNew);
       setResult(s);
-      // L1: persist per-round metrics with the sens/DPI in effect.
+
+      const probePlan = activeProbeRef.current;
+      const settingsNow = loadSettings();
+      const profile = findProfile(settingsNow.profileId);
+      const probeSens =
+        probePlan && settingsNow.dpi !== null
+          ? sensFromCm360(profile, probePlan.cm360, settingsNow.dpi)
+          : null;
+
+      // L1: persist per-round metrics with the sens/DPI actually in effect.
       appendAimSessionLog({
         modeId: mode.id,
         score: s.score,
@@ -363,12 +406,94 @@ export function AimTrainerApp() {
         accuracy: s.accuracy,
         avgKillTime: s.avgKillTime,
         completedAt: Date.now(),
-        settings: loadSettings(),
+        settings: settingsNow,
+        sensitivityOverride: probeSens ?? undefined,
+        cm360Override: probePlan?.cm360,
       });
+
+      if (probePlan) {
+        const rec = loadRecommendation();
+        const probeProxy = proxyObjFromSession({
+          accuracy: s.accuracy,
+          avgKillTime: s.avgKillTime,
+          score: s.score,
+        });
+        // Baseline uses prior logs near the recommendation (exclude this probe row).
+        const baselineProxy = rec
+          ? baselineProxyFromLogs(
+              readAimSessionLog().slice(0, -1),
+              rec.cm360,
+            )
+          : null;
+        const verdict = evaluateProbe({
+          kind: probePlan.kind,
+          probeProxy,
+          baselineProxy,
+        });
+        setProbeVerdict(verdict);
+        if (rec) {
+          appendProbeLog({
+            kind: probePlan.kind,
+            cm360: probePlan.cm360,
+            modeId: mode.id,
+            proxy: probeProxy,
+            verdict,
+            taskFamily: rec.taskFamily,
+            completedAt: Date.now(),
+          });
+          const patched = applyProbeToRecommendation(
+            rec,
+            probePlan,
+            verdict,
+            Date.now(),
+          );
+          if (
+            patched.cm360 !== rec.cm360 ||
+            patched.confidence !== rec.confidence ||
+            patched.cm360Low !== rec.cm360Low ||
+            patched.cm360High !== rec.cm360High
+          ) {
+            patchLatestRecommendation({
+              cm360: patched.cm360,
+              cm360Low: patched.cm360Low,
+              cm360High: patched.cm360High,
+              confidence: patched.confidence,
+            });
+          }
+        }
+        restoreUserSensitivity();
+      }
+
+      activeProbeRef.current = null;
       setDriftMessage(checkSensitivityDrift().message);
     };
     session.start();
     engine.requestLock();
+  }
+
+  /**
+   * handleAdoptProbe writes the probe cm/360 into settings when the neighbor won.
+   * Clears the adopt CTA afterward so the athlete does not double-apply.
+   */
+  function handleAdoptProbe(): void {
+    if (!probeAdoptAvailable(activeProbe, probeVerdict) || !activeProbe) return;
+    const settings = loadSettings();
+    if (settings.dpi === null) return;
+    const profile = findProfile(settings.profileId);
+    const next = applyRecommendationToSettings(
+      settings,
+      profile,
+      activeProbe.cm360,
+    );
+    if (!next) return;
+    saveSettings(next);
+    engineRef.current?.setSensitivity(
+      profile,
+      next.sensitivity,
+      next.rotationExpr,
+    );
+    setActiveProbe(null);
+    setProbeVerdict(null);
   }
 
   function applyGainForCm360(cm360: number): void {
@@ -415,8 +540,10 @@ export function AimTrainerApp() {
     setPaused(false);
     setResult(null);
     setHud(null);
+    const stageLabel =
+      state.protocolPhase === "refine" ? "收窄" : "探索";
     setCalibProgress(
-      `校准试次 ${state.conditionIndex + 1}/${state.conditions.length}`,
+      `校准${stageLabel} ${state.conditionIndex + 1}/${state.conditions.length}`,
     );
 
     const session = engine.createSession(mode, { kinematics: true });
@@ -632,6 +759,7 @@ export function AimTrainerApp() {
 
   function backToMenu() {
     disposeSession();
+    restoreUserSensitivity();
     setScreen("menu");
     setPaused(false);
     setResult(null);
@@ -641,6 +769,9 @@ export function AimTrainerApp() {
     setHud(null);
     setSelectedMode(null);
     setCalibInTrial(false);
+    setActiveProbe(null);
+    setProbeVerdict(null);
+    activeProbeRef.current = null;
     if (calibOpen) {
       closeCalibration();
     }
@@ -716,6 +847,9 @@ export function AimTrainerApp() {
       {(screen === "game" || calibInTrial) && hud && <HudView hud={hud} />}
       {calibInTrial && calibProgress && !paused && !result && (
         <div className="aim-calib-hud-progress">{calibProgress}</div>
+      )}
+      {!calibInTrial && activeProbe && !paused && !result && screen === "game" && (
+        <div className="aim-calib-hud-progress">精修探测 · ±5% cm/360</div>
       )}
 
       {settingsOpen && (
@@ -878,6 +1012,22 @@ export function AimTrainerApp() {
               ) : null}
             </div>
             <h2 className="aim-result-title">结算</h2>
+            {activeProbe ? (
+              <p className="aim-hint">
+                本次为 ±5% 精修探测（
+                {activeProbe.kind === "baseline"
+                  ? "基线"
+                  : activeProbe.kind === "plus"
+                    ? "+5% cm/360"
+                    : "−5% cm/360"}
+                ）
+                {probeVerdict === "agree"
+                  ? " · 邻域表现更优，已弱融合推荐"
+                  : probeVerdict === "worse"
+                    ? " · 邻域更差，已略降置信"
+                    : " · 证据不足，未改推荐"}
+              </p>
+            ) : null}
             <div className="aim-result-stats">
               <div className="aim-rs">
                 <span className="aim-rs__label">HITS</span>
@@ -912,6 +1062,15 @@ export function AimTrainerApp() {
               >
                 再来一局
               </button>
+              {probeAdoptAvailable(activeProbe, probeVerdict) ? (
+                <button
+                  type="button"
+                  className="aim-btn"
+                  onClick={handleAdoptProbe}
+                >
+                  采纳探测增益写入设置
+                </button>
+              ) : null}
               <button type="button" className="aim-btn" onClick={backToMenu}>
                 返回菜单
               </button>

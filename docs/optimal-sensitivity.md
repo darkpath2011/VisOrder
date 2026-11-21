@@ -325,14 +325,14 @@ confidence     ↓ if cognitive_state_poor or N_sessions 不足
 ```text
 1. 输入：游戏档案、DPI、（可选）当前感度 / 控制习惯
 2. 声明：本次推荐针对「任务族 X」；客观与主观可能不一致
-3. 校准实验：多增益条件 × 重复 × 顺序随机；条件间相对步长
+3. 校准实验：粗网格探索（相对步长、随机化、重复）→ 客观峰值附近自适应收窄（±4%/±8%）
 4. 拟合：S_obj(G)、S_sub(G) + 置信区间
 5. 独立短验证关
 6. 输出：cm/360 → in-game sens；推荐点 + 建议区间；一键写入 settings
-7. 复测：平台期 / N 天后提示；日常可用小扰动精修（路线 C）
+7. 复测：平台期 / N 天后提示；日常 ±5% 小扰动精修（路线 C）；一致才升置信
 ```
 
-存储对齐：`SensitivitySettings = { profileId, sensitivity }`；建议另存推荐历史（含任务族、DPI、客观/主观分数、验证结果）。
+存储对齐：`SensitivitySettings = { profileId, sensitivity }`；另存推荐历史（含任务族、DPI、客观/主观分数、验证结果）与本地 probe 日志。
 
 ---
 
@@ -347,6 +347,9 @@ confidence     ↓ if cognitive_state_poor or N_sessions 不足
 - [x] UI：解释「为何是这个值 / 区间」；文案避免绝对化  
 - [x] 异常：pointer lock 丢失、DPI 填错、系统加速未关（文案提醒；DPI 强制）  
 - [x] Aim 按局日志（含当时感度）；认知 suite 结果持久化（见 §8.5）  
+- [x] 校准内自适应收窄：explore 粗网格后按 S_obj 峰追加 ±4%/±8% refine  
+- [x] 路线 C 日常小扰动：约每 3 局 ±5% cm/360 盲测；弱融合推荐；不自动写 settings  
+- [x] 置信证据边界：单次诚实、跨次/探测一致才升；不一致降置信并加宽区间  
 
 ---
 
@@ -373,6 +376,7 @@ confidence     ↓ if cognitive_state_poor or N_sessions 不足
 | 2026-03-21 | 纳入科学框架：双最优、Fitts / Weber / CD Gain / SAT；个体模型 \(S^*=f(U,D,T,E)\)；主路径对齐「基线→多条件实验→拟合→独立验证」。 |
 | 2026-03-21 | 多源数据：瞄准模式可直接进 \(S^*(G)\)；认知钻只作 \(U\) 先验/门控，禁止与 aim 分混加权推感度。先补按局日志。 |
 | 2026-03-21 | Scope C 落地：`gain.ts` / session log / suite prior / sens-finder 校准向导 / recommendation + drift banner。 |
+| 2026-03-21 | 校准自适应收窄（`adapt.ts`）+ 路线 C 日常 ±5% 探测（`onlineProbe.ts`）；置信仅随一致证据上升。 |
 
 ---
 

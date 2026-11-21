@@ -271,6 +271,31 @@ export function saveRecommendation(
 }
 
 /**
+ * patchLatestRecommendation replaces the newest history row in place and syncs.
+ * Used by route-C probes so daily refinement updates confidence/cm360 without
+ * appending a full new calibration entry. Returns null when history is empty.
+ */
+export function patchLatestRecommendation(
+  patch: Partial<
+    Pick<
+      SensitivityRecommendation,
+      "cm360" | "cm360Low" | "cm360High" | "confidence" | "sObj" | "sSub" | "verified"
+    >
+  >,
+): SensitivityRecommendation | null {
+  const history = readRecommendationHistory();
+  if (history.length === 0) return null;
+  const latest = history[history.length - 1]!;
+  const next = normalizeRecommendation({ ...latest, ...patch }) ?? {
+    ...latest,
+    ...patch,
+  };
+  writeHistory([...history.slice(0, -1), next]);
+  void pushRecommendationToCloud(next);
+  return next;
+}
+
+/**
  * clearRecommendation removes local recommendation history (e.g. after profile reset).
  * Does not delete cloud rows; callers that need a full wipe should use a dedicated sync clear.
  */

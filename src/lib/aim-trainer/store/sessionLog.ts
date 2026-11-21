@@ -111,7 +111,11 @@ export function readAimSessionLog(): AimSessionLogEntry[] {
   }
 }
 
-/** Payload for one finished round; sens/DPI are taken from settings. */
+/**
+ * Payload for one finished round; sens/DPI default from settings.
+ * Optional sensitivity/cm360 override records a live probe gain that differs
+ * from saved settings so longitudinal fits see the true Control-Display gain.
+ */
 export type AimSessionLogInput = {
   modeId: string;
   score: number;
@@ -121,6 +125,10 @@ export type AimSessionLogInput = {
   avgKillTime: number | null;
   completedAt: number;
   settings: SensitivitySettings;
+  /** When set, logged instead of settings.sensitivity (route-C probe rounds). */
+  sensitivityOverride?: number;
+  /** When set, logged instead of computing from settings (route-C probe rounds). */
+  cm360Override?: number | null;
 };
 
 /**
@@ -216,18 +224,20 @@ export async function pushAimSessionToCloud(
  */
 export function appendAimSessionLog(partial: AimSessionLogInput): AimSessionLogEntry {
   const profile = findProfile(partial.settings.profileId);
+  const sensitivity =
+    partial.sensitivityOverride ?? partial.settings.sensitivity;
+  const cm360 =
+    partial.cm360Override !== undefined
+      ? partial.cm360Override
+      : cm360FromSens(profile, sensitivity, partial.settings.dpi);
   const entry: AimSessionLogEntry = {
     id: newId(),
     source: "aim",
     modeId: partial.modeId,
     profileId: partial.settings.profileId,
-    sensitivity: partial.settings.sensitivity,
+    sensitivity,
     dpi: partial.settings.dpi,
-    cm360: cm360FromSens(
-      profile,
-      partial.settings.sensitivity,
-      partial.settings.dpi,
-    ),
+    cm360,
     score: partial.score,
     hits: partial.hits,
     shots: partial.shots,
