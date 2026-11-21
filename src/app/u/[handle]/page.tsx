@@ -164,9 +164,11 @@ function AthleteProfileView({ profile }: { profile: AthleteProfile }) {
 }
 
 /**
- * AthleteBody loads one public profile by handle, or 404 when unknown.
+ * AthleteBody awaits route params and loads one public profile, or 404 when unknown.
+ * Params stay inside Suspense so the static shell can prerender without blocking.
  */
-async function AthleteBody({ handle }: { handle: string }) {
+async function AthleteBody({ params }: AthletePageProps) {
+  const { handle } = await params;
   const profile = await fetchAthleteProfile(handle);
   if (!profile) {
     notFound();
@@ -192,15 +194,13 @@ function AthleteFallback() {
 /**
  * AthletePage streams profile content so navigation chrome is never blocked.
  */
-export default async function AthletePage({ params }: AthletePageProps) {
-  const { handle } = await params;
-
+export default function AthletePage({ params }: AthletePageProps) {
   return (
     <>
       <SiteHeader />
       <main className="athlete-page">
         <Suspense fallback={<AthleteFallback />}>
-          <AthleteBody handle={handle} />
+          <AthleteBody params={params} />
         </Suspense>
       </main>
     </>
